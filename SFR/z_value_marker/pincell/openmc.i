@@ -29,7 +29,7 @@
     type=ParsedAux
     variable=std_heat_source
     coupled_variables = 'heat_source mean_heat_source n_elements'
-    expression='sqrt((heat_source-mean_heat_source)*(heat_source-mean_heat_source))/n_elements'
+    expression='sqrt((heat_source-mean_heat_source)*(heat_source-mean_heat_source)/n_elements)'
     execute_on = 'TIMESTEP_END'
     order=1
   []
