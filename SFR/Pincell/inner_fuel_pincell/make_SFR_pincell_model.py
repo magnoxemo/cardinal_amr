@@ -2,14 +2,17 @@ import openmc
 import numpy as np
 from argparse import ArgumentParser
 import openmc.material
-import common_input as geom
-from materials import *
 
-def settings(shannon_entropy: bool, height: float):
+import common_input as geom
+from SFR.materials import make_sfr_material, material_dict
+
+
+def simulation_settings(shannon_entropy: bool, height: float):
     pitch = 1.25984
     lower_left = (-pitch / 2, -pitch / 2, 0.0)
     upper_right = (pitch / 2, pitch / 2, height)
     uniform_dist = openmc.stats.Box(lower_left, upper_right)
+
     settings = openmc.Settings()
     settings.source = openmc.IndependentSource(space=uniform_dist)
     settings.batches = 200
@@ -48,13 +51,10 @@ def main():
         help="Add Shannon entropy mesh"
     )
 
-
     arguments = ap.parse_args()
     arguments = ap.parse_args()
 
-    N = arguments.n_axial
     shannon_entropy = arguments.shannon_entropy
-    height = geom.height
 
     inner_fuel_material = make_sfr_material(material_dict['inner_fuel'], percent_type='wo')
     cladding_material = make_sfr_material(material_dict['cladding'], percent_type='ao')
@@ -68,45 +68,28 @@ def main():
 
     fuel_or = openmc.ZCylinder(r=geom.r_fuel)
     clad_ir = openmc.ZCylinder(r=geom.r_clad_inner)
-    clad_or = openmc.ZCylinder(r=geom.r_clad_inner+geom.t_clad)
+    clad_or = openmc.ZCylinder(r=geom.r_clad_inner + geom.t_clad)
 
-    z_plane = [openmc.ZPlane(z0=i) for i in np.linspace(-height / 2, height / 2, N + 1)]
+    z_plane = [openmc.ZPlane(z0=i) for i in np.linspace(-geom.height / 2, geom.height / 2, arguments.n_axial + 1)]
 
     top = z_plane[-1]
     bottom = z_plane[0]
     top.boundary_type = "vacuum"
     bottom.boundary_type = "vacuum"
 
-    inner_cells = {"fuel": [], "gas_gap": [], "clad": [], "sodium": []}
     all_inner_cells = []
 
-    for i in range(N):
-
+    for i in range(arguments.n_axial):
         layer = +z_plane[i] & -z_plane[i + 1]
-        inner_cells["fuel"].append(
-            openmc.Cell(fill=inner_fuel_material, region=layer & -fuel_or)
-        )
-        inner_cells["gas_gap"].append(
-            openmc.Cell(fill=helium, region=layer & +fuel_or & -clad_ir)
-        )
-        inner_cells["clad"].append(
-            openmc.Cell(fill=cladding_material, region=layer & +clad_ir & -clad_or)
-        )
-        inner_cells["sodium"].append(openmc.Cell(fill=sodium, region=+clad_or & layer))
+        all_inner_cells.append(openmc.Cell(fill=inner_fuel_material, region=layer & -fuel_or))
+        all_inner_cells.append(openmc.Cell(fill=helium, region=layer & +fuel_or & -clad_ir))
+        all_inner_cells.append(openmc.Cell(fill=cladding_material, region=layer & +clad_ir & -clad_or))
+        all_inner_cells.append(openmc.Cell(fill=sodium, region=+clad_or & layer))
 
-        all_inner_cells.extend(
-            [
-                inner_cells["fuel"][i],
-                inner_cells["gas_gap"][i],
-                inner_cells["clad"][i],
-                inner_cells["sodium"][i],
-            ]
-        )
-
-    geometry = openmc.Geometry(all_cells)
+    geometry = openmc.Geometry(all_inner_cells)
     geometry.export_to_xml()
 
-    settings(shannon_entropy=False, height=height)
+    simulation_settings(shannon_entropy=False, height=geom.height)
 
 
 if __name__ == "__main__":

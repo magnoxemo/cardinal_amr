@@ -33,11 +33,11 @@
 
 [Postprocessors]
   [num_active]
-    type = NumElems
+    type = NumElements
     elem_filter = active
   []
   [num_total]
-    type = NumElems
+    type = NumElements
     elem_filter = total
   []
   [max_rel_err]
