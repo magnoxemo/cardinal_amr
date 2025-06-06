@@ -1,1 +1,0 @@
-../make_assembly_model.py

@@ -1,12 +1,10 @@
-import sys
-sys.path.append("../../")
 import openmc
 import numpy as np
 from argparse import ArgumentParser
 import openmc.material
 
-import common_input as geom
-from materials import make_sfr_material, material_dict
+from SFR.materials import make_sfr_material, material_dict
+from SFR import common_input as geom
 
 
 def simulation_settings(shannon_entropy: bool, height: float):
@@ -37,16 +35,7 @@ def simulation_settings(shannon_entropy: bool, height: float):
     return setting
 
 
-def model_generate():
-    """
-    :return:
-    a pincell universe,
-    openmc.Materials class,
-    openmc.Geometry class,
-    openmc.Settings class
-
-    the universe class is mostly for reuse if we want to create an assembly
-    """
+def argument_parser():
     ap = ArgumentParser(description="SFR Pincell Model Generator")
     ap.add_argument(
         "-n",
@@ -65,7 +54,19 @@ def model_generate():
                     help=("Material composition of the pincell fuel material"
                           "based on the location of pincell in the reactor geometry"))
 
-    arguments = ap.parse_args()
+    return ap.parse_args()
+
+
+def model_generate(arguments):
+    """
+    :return:
+    a pincell universe,
+    openmc.Materials class,
+    openmc.Geometry class,
+    openmc.Settings class
+
+    the universe class is mostly for reuse if we want to create an assembly
+    """
 
     if arguments.pincell_type == "inner_pincell":
         fuel_material = make_sfr_material(material_dict['inner_fuel'], percent_type='wo')
@@ -101,5 +102,6 @@ def model_generate():
 
 
 if __name__ == "__main__":
-    _, mat, geometry, settings = model_generate()
-    openmc.model.Model(geometry, mat, settings).export_to_xml()
+    args = argument_parser()
+    _, mat, geometry, settings = model_generate(args)
+    openmc.model.Model(geometry, mat, settings).export_to_model_xml()

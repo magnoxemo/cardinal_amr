@@ -1,26 +1,18 @@
-import sys
-sys.path.append("../../")
-
+import os
 import openmc
 import openmc.material
 
-from materials import make_sfr_material, material_dict
-import common_input as geom
-from SFR.Pincell.make_sfr_pincell_model import model_generate as pincell_model_generator
+from SFR.materials import make_sfr_material, material_dict
+from SFR import common_input as geom
+from SFR.Pincell.make_openmc_model import model_generate as pincell_model_generator
+from SFR.Pincell.make_openmc_model import argument_parser
 
 
 def make_hexagonal_ring_lists(number_of_ring: int, universe: openmc.Universe):
-    ring_list = []
-    for i in range(number_of_ring, 0, -1):
-        if i == 1:
-            ring = [universe]
-        else:
-            ring = [universe] * (i - 1) * 6
-        ring_list.append(ring)
-    return ring_list
+    return [[universe] if i == 1 else [universe] * (i - 1) * 6 for i in range(number_of_ring, 0, -1)]
 
 
-def main():
+def main(arguments):
     """
 
     :return:
@@ -37,7 +29,7 @@ def main():
     top.boundary_type = "vacuum"
     bottom.boundary_type = "vacuum"
     sodium = make_sfr_material(material_dict['sodium'], percent_type='ao')
-    inner_u, material, _, setting = pincell_model_generator()
+    inner_u, material, _, setting = pincell_model_generator(arguments)
     material.append(sodium)
 
     sodium_mod_cell = openmc.Cell(fill=sodium)
@@ -65,6 +57,6 @@ def main():
 
 
 if __name__ == "__main__":
-    _, mat, geometry, settings = main()
-    openmc.model.Model(geometry, mat, settings).export_to_xml()
-
+    args = argument_parser()
+    _, mat, geometry, settings = main(args)
+    openmc.model.Model(geometry, mat, settings).export_to_model_xml()
