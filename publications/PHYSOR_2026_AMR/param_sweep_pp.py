@@ -280,7 +280,7 @@ def plot_xline_plots(xl, ref_xl, case, to_mask):
           check_make_dir(f'./results/{case}/gif_images/{ind}/batch_{b}/ref_{r}/{data}')
           print(f'Generating figures in results/{case}/gif_images/{ind}/batch_{b}/ref_{r}/{data}/*')
 
-          # Compute the bounds for both axes to prevent the axes scales from bounding all over the
+          # Compute the bounds for both axes to prevent the axes scales from bouncing all over the
           # place during refinement.
           a1_min = 1e30
           a1_max = 0.0
