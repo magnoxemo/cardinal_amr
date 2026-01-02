@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
+from param_sweep_common import *
+
 # Plotting parameters
 DEFAULT_FONT_SIZE = 12
 LARGE_FONT_SIZE = 18
@@ -21,6 +23,8 @@ FIG_3D_FONT_SIZE = 22
 
 SIZE_L2_W = 8
 SIZE_L2_H = 6
+
+REFINE_FRACTION_DATA_MARKERS = [",", ".", "o", "+", "x"]
 
 # Dictionaries which map between shorthand and meaningful names.
 ALG_NAMES = {
@@ -66,9 +70,6 @@ INIT_X_LAYER_BNDS = {
 CYCLES = 10
 CYCLE_POINTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 LINE_DATA = ['Flux_X_Avg_Out', 'Heating_X_Avg_Out', 'Flux_X_Int_Out', 'Heating_X_Int_Out']
-BATCH_COUNT = [100, 1000]
-ALGORITHMS  = ['cj', 'cj_lh', 'inv_od', 'inv_od_lh', 'vj', 'vj_lh']
-REF_FRAC = ['01', '02', '03', '04', '05']
 
 # Set default plotting settings.
 plt.rcParams.update({'font.size': DEFAULT_FONT_SIZE})
@@ -240,9 +241,11 @@ def load_data_xlines(case):
   lines = {}
   for ind in ALGORITHMS:
     lines[ind] = {}
-    for b in BATCH_COUNT:
+    for batches in BATCHES:
+      b = batches[1] - batches[0] # Number of active batches (total - inactive)
       lines[ind][b] = {}
-      for r in REF_FRAC:
+      for fraction in REFINEMET_FRAC:
+        r = f'0{fraction}' # Shorthand for the refinement fraction (as stored on disk from the parameter sweep)
         lines[ind][b][r] = {}
         for data in LINE_DATA:
           lines[ind][b][r][data] = []
@@ -260,8 +263,10 @@ def plot_xline_plots(xl, ref_xl, case, to_mask):
   mask = idx_mask_fuel(case, True) if to_mask else []
 
   for ind in ALGORITHMS:
-    for b in BATCH_COUNT:
-      for r in REF_FRAC:
+    for batches in BATCHES:
+      b = batches[1] - batches[0] # Number of active batches (total - inactive)
+      for fraction in REFINEMET_FRAC:
+        r = f'0{fraction}' # Shorthand for the refinement fraction (as stored on disk from the parameter sweep)
         for data in LINE_DATA:
           check_make_dir(f'./results/{case}/gif_images/{ind}/batch_{b}/ref_{r}/{data}')
           print(f'Generating figures in results/{case}/gif_images/{ind}/batch_{b}/ref_{r}/{data}/*')
@@ -337,9 +342,11 @@ def l2_diffs(xl, ref_xl):
   diffs = {}
   for ind in ALGORITHMS:
     diffs[ind] = {}
-    for b in BATCH_COUNT:
+    for batches in BATCHES:
+      b = batches[1] - batches[0] # Number of active batches (total - inactive)
       diffs[ind][b] = {}
-      for r in REF_FRAC:
+      for fraction in REFINEMET_FRAC:
+        r = f'0{fraction}' # Shorthand for the refinement fraction (as stored on disk from the parameter sweep)
         diffs[ind][b][r] = {}
         for data in LINE_DATA:
           diffs[ind][b][r][data] = []
@@ -350,24 +357,25 @@ def l2_diffs(xl, ref_xl):
 
 ## Function to plot the L2 difference as a function of adaptivity cycles and refinement threshold.
 def plot_l2_diff(case, diffs):
-  DATA_MARKERS = [",", ".", "o", "+", "x"]
-
   check_make_dir(f'./results/{case}/l2_diff')
   print(f'Generating figures in ./results/{case}/l2_diff/*')
 
-  for b in BATCH_COUNT:
+  for batches in BATCHES:
+    b = batches[1] - batches[0] # Number of active batches (total - inactive)
     for data in LINE_DATA:
       fig = plt.figure(figsize=(SIZE_3D_W,SIZE_3D_H))
       ax_1 = fig.add_subplot(projection='3d')
 
       first = True
       lb = ''
-      for r in range(len(REF_FRAC)):
+      for r in range(len(REFINEMET_FRAC)):
+        fraction = f'0{REFINEMET_FRAC[r]}' # Shorthand for the refinement fraction (as stored on disk from the parameter sweep)
         for ind in ALGORITHMS:
           last_idx = last_adaptivity_idx(case, ind, b, '03', CYCLE_POINTS)
           style = '-' if ind.count('lh') > 0 else ':'
-          ax_1.plot(CYCLE_POINTS[:last_idx], diffs[ind][b][REF_FRAC[r]][data][:last_idx], zs=(float(REF_FRAC[r]) / 10.0), zdir='x',
-                    color = ALG_COLOURS[ind], marker = DATA_MARKERS[r], label = lb + ALG_NAMES[ind], linestyle = style, linewidth=2, markersize=8)
+          ax_1.plot(CYCLE_POINTS[:last_idx], diffs[ind][b][r][data][:last_idx], zs=(float(fraction) / 10.0), zdir='x',
+                    color = ALG_COLOURS[ind], marker = REFINE_FRACTION_DATA_MARKERS[r], label = lb + ALG_NAMES[ind],
+                    linestyle = style, linewidth=2, markersize=8)
         if first:
           first = False
           lb = '_'
@@ -387,9 +395,11 @@ def get_pp_data(case):
   pp_data = {}
   for ind in ALGORITHMS:
     pp_data[ind] = {}
-    for b in BATCH_COUNT:
+    for batches in BATCHES:
+      b = batches[1] - batches[0] # Number of active batches (total - inactive)
       pp_data[ind][b] = {}
-      for r in REF_FRAC:
+      for fraction in REFINEMET_FRAC:
+        r = f'0{fraction}' # Shorthand for the refinement fraction (as stored on disk from the parameter sweep)
         df = pd.read_csv(f'./{case}/{ind}_{b}/frac_{r}.csv')
         pp_data[ind][b][r] = {
           'num_elem' : df['num_active'].to_numpy(),
@@ -402,25 +412,27 @@ def get_pp_data(case):
 ## Function to plot the post-processor data (number of active elements
 ## and mean relative error for heating).
 def plot_pp_data(case, pp_data):
-  DATA_MARKERS = [",", ".", "o", "+", "x"]
   plt.rcParams.update({'font.size': LARGE_FONT_SIZE})
 
   check_make_dir(f'./results/{case}/num_elem')
   check_make_dir(f'./results/{case}/mean_heating_err')
   print(f'Generating figures in ./results/{case}/num_elem/* and ./results/{case}/mean_heating_err/*')
 
-  for b in BATCH_COUNT:
+  for batches in BATCHES:
+    b = batches[1] - batches[0] # Number of active batches (total - inactive)
     fig_1 = plt.figure(figsize=(SIZE_3D_W,SIZE_3D_H))
     ax_1 = fig_1.add_subplot(projection='3d')
 
     first = True
     lb = ''
-    for r in range(len(REF_FRAC)):
+    for r in range(len(REFINEMET_FRAC)):
+      fraction = f'0{REFINEMET_FRAC[r]}' # Shorthand for the refinement fraction (as stored on disk from the parameter sweep)
       for ind in ALGORITHMS:
         last_idx = last_adaptivity_idx(case, ind, b, '03', CYCLE_POINTS)
         style = '-' if ind.count('lh') > 0 else ':'
-        ax_1.plot(CYCLE_POINTS[:last_idx], pp_data[ind][b][REF_FRAC[r]]['num_elem'][:last_idx], zs=(float(REF_FRAC[r]) / 10.0), zdir='x',
-                  color = ALG_COLOURS[ind], marker = DATA_MARKERS[r], label = lb + ALG_NAMES[ind], linestyle = style, linewidth=2, markersize=8)
+        ax_1.plot(CYCLE_POINTS[:last_idx], pp_data[ind][b][fraction]['num_elem'][:last_idx], zs=(float(fraction) / 10.0), zdir='x',
+                  color = ALG_COLOURS[ind], marker = REFINE_FRACTION_DATA_MARKERS[r], label = lb + ALG_NAMES[ind],
+                  linestyle = style, linewidth=2, markersize=8)
       if first:
         first = False
         lb = '_'
