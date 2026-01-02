@@ -460,8 +460,8 @@ if __name__ == "__main__":
   ap.add_argument('--disable-3d',     action='store_false',
                   help='Whether the 3D comparison plots should be generateed or not.')
   ap.add_argument('--disable-mask',   action='store_false',
-                  help='Whether the plots over the lengths of the slab overlay the material ' \
-                       'compositions of the slab or not.')
+                  help='Whether the plots over the slab lengths are masked so they only contain the' \
+                       ' fueled regions.')
   args = ap.parse_args()
 
   xl = load_data_xlines(args.case)
