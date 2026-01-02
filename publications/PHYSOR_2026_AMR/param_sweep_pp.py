@@ -4,11 +4,10 @@ from argparse import ArgumentParser
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-import imageio.v3 as iio
 
-# Plotting settings.
-plt.rcParams.update({'font.size': 12})
-plt.rcParams.update({'text.usetex': True})
+# Plotting parameters
+DEFAULT_FONT_SIZE = 12
+LARGE_FONT_SIZE = 18
 
 ALPHA = 0.7
 
@@ -23,6 +22,7 @@ FIG_3D_FONT_SIZE = 22
 SIZE_L2_W = 8
 SIZE_L2_H = 6
 
+# Dictionaries which map between shorthand and meaningful names.
 ALG_NAMES = {
   'cj' : 'Current Jump',
   'cj_lh' : 'Current Jump (LH)',
@@ -69,13 +69,10 @@ LINE_DATA = ['Flux_X_Avg_Out', 'Heating_X_Avg_Out', 'Flux_X_Int_Out', 'Heating_X
 BATCH_COUNT = [100, 1000]
 ALGORITHMS  = ['cj', 'cj_lh', 'inv_od', 'inv_od_lh', 'vj', 'vj_lh']
 REF_FRAC = ['01', '02', '03', '04', '05']
-ACTUAL_FRACTIONS = {
-  '01' : 0.1,
-  '02' : 0.2,
-  '03' : 0.3,
-  '04' : 0.4,
-  '05' : 0.5
-}
+
+# Set default plotting settings.
+plt.rcParams.update({'font.size': DEFAULT_FONT_SIZE})
+plt.rcParams.update({'text.usetex': True})
 
 # Helper functions.
 ## A function to return the indices corresponding to fuel locations.
@@ -134,17 +131,6 @@ def make_refined_bnds(case):
     bounds = bnds
 
   return np.array(bounds)
-
-## A function to print a set of boundaries.
-def print_bnds(bounds):
-  to_print = ''
-  cntr = 0
-  for b in bounds:
-    to_print += str(b) + ' '
-    cntr += 1
-    if cntr % 10 == 0:
-      to_print += '\n'
-  print(to_print)
 
 ## Check if a directory exists. If not, make it.
 def check_make_dir(dir):
@@ -269,7 +255,7 @@ def load_data_xlines(case):
 
 # Function to plot the x line data (integrals / averages over the y-z plane in slices).
 def plot_xline_plots(xl, ref_xl, case, to_mask):
-  plt.rcParams.update({'font.size': 18})
+  plt.rcParams.update({'font.size': LARGE_FONT_SIZE})
   x_bnds = make_refined_bnds(case)
   mask = idx_mask_fuel(case, True) if to_mask else []
 
@@ -344,20 +330,7 @@ def plot_xline_plots(xl, ref_xl, case, to_mask):
             fig_1.tight_layout()
             fig_1.savefig(f'./results/{case}/gif_images/{ind}/batch_{b}/ref_{r}/{data}/{data}_{j}.png')
             plt.close('all')
-  plt.rcParams.update({'font.size': 12})
-
-## Function to convert the plots over x into gif images scrolling through adaptivity cycles.
-def make_gifs(case):
-  for ind in ALGORITHMS:
-    for b in BATCH_COUNT:
-      for r in REF_FRAC:
-        for data in LINE_DATA:
-          check_make_dir(f'./results/{case}/gifs/{ind}/batch_{b}/ref_{r}')
-          print(f'Generating results/{case}/gifs/{ind}/batch_{b}/ref_{r}/{data}.gif')
-          images = []
-          for j in range(1, CYCLES + 1):
-            images.append(iio.imread(f'./results/{case}/gif_images/{ind}/batch_{b}/ref_{r}/{data}/{data}_{j}.png'))
-          iio.imwrite(f'./results/{case}/gifs/{ind}/batch_{b}/ref_{r}/{data}.gif', images, fps = 1, loop = 0)
+  plt.rcParams.update({'font.size': DEFAULT_FONT_SIZE})
 
 ## Function to generate a relative L2 difference between each parameter sweep and the reference.
 def l2_diffs(xl, ref_xl):
@@ -393,7 +366,7 @@ def plot_l2_diff(case, diffs):
         for ind in ALGORITHMS:
           last_idx = last_adaptivity_idx(case, ind, b, '03', CYCLE_POINTS)
           style = '-' if ind.count('lh') > 0 else ':'
-          ax_1.plot(CYCLE_POINTS[:last_idx], diffs[ind][b][REF_FRAC[r]][data][:last_idx], zs=float(ACTUAL_FRACTIONS[REF_FRAC[r]]), zdir='x',
+          ax_1.plot(CYCLE_POINTS[:last_idx], diffs[ind][b][REF_FRAC[r]][data][:last_idx], zs=(float(REF_FRAC[r]) / 10.0), zdir='x',
                     color = ALG_COLOURS[ind], marker = DATA_MARKERS[r], label = lb + ALG_NAMES[ind], linestyle = style, linewidth=2, markersize=8)
         if first:
           first = False
@@ -430,7 +403,7 @@ def get_pp_data(case):
 ## and mean relative error for heating).
 def plot_pp_data(case, pp_data):
   DATA_MARKERS = [",", ".", "o", "+", "x"]
-  plt.rcParams.update({'font.size': 16})
+  plt.rcParams.update({'font.size': LARGE_FONT_SIZE})
 
   check_make_dir(f'./results/{case}/num_elem')
   check_make_dir(f'./results/{case}/mean_heating_err')
@@ -446,7 +419,7 @@ def plot_pp_data(case, pp_data):
       for ind in ALGORITHMS:
         last_idx = last_adaptivity_idx(case, ind, b, '03', CYCLE_POINTS)
         style = '-' if ind.count('lh') > 0 else ':'
-        ax_1.plot(CYCLE_POINTS[:last_idx], pp_data[ind][b][REF_FRAC[r]]['num_elem'][:last_idx], zs=float(ACTUAL_FRACTIONS[REF_FRAC[r]]), zdir='x',
+        ax_1.plot(CYCLE_POINTS[:last_idx], pp_data[ind][b][REF_FRAC[r]]['num_elem'][:last_idx], zs=(float(REF_FRAC[r]) / 10.0), zdir='x',
                   color = ALG_COLOURS[ind], marker = DATA_MARKERS[r], label = lb + ALG_NAMES[ind], linestyle = style, linewidth=2, markersize=8)
       if first:
         first = False
@@ -457,94 +430,27 @@ def plot_pp_data(case, pp_data):
     ax_1.set_xlabel('\nRefinement Threshold', fontsize=FIG_3D_FONT_SIZE)
     ax_1.set_ylabel('\nNumber of Cycles', fontsize=FIG_3D_FONT_SIZE)
     ax_1.set_zlabel('Number of Active Elements', fontsize=FIG_3D_FONT_SIZE)
-    #ax_1.view_init(elev = ELEVATION,  azim = -60, roll = 0.0)
     ax_1.view_init(elev = ELEVATION,  azim = AZIMUTHAL, roll = 0.0)
     ax_1.ticklabel_format(axis='z', style='sci', scilimits=(0,0))
     fig_1.tight_layout(rect=(-0.15, 0.0, 1.0, 1.0))
     fig_1.savefig(f'./results/{case}/num_elem/{b}_num_elem.png')
     plt.close('all')
 
-    fig_2 = plt.figure(figsize=(SIZE_3D_W,SIZE_3D_H))
-    ax_2 = fig_2.add_subplot(projection='3d')
-    first = True
-    lb = ''
-    for r in range(len(REF_FRAC)):
-      for ind in ALGORITHMS:
-        style = '-' if ind.count('lh') > 0 else ':'
-        ax_2.plot(CYCLE_POINTS, 1e2 * pp_data[ind][b][REF_FRAC[r]]['mean_err'], zs=float(ACTUAL_FRACTIONS[REF_FRAC[r]]), zdir='x',
-                  color = ALG_COLOURS[ind], marker = DATA_MARKERS[r], label = lb + ALG_NAMES[ind], linestyle = style, linewidth=2, markersize=8)
-      if first:
-        first = False
-        lb = '_'
-    ax_2.legend(ncols=3, prop={'size': FIG_3D_FONT_SIZE})
-    ax_2.tick_params(which='both', labelsize=FIG_3D_FONT_SIZE)
-    ax_2.set_xlabel('\nRefinement Threshold', fontsize=FIG_3D_FONT_SIZE)
-    ax_2.set_ylabel('\nNumber of Cycles', fontsize=FIG_3D_FONT_SIZE)
-    ax_2.set_zlabel('\n Average Statistical Relative Error ($\%$)', fontsize=FIG_3D_FONT_SIZE)
-    ax_2.view_init(elev = ELEVATION,  azim = AZIMUTHAL, roll = 0.0)
-    fig_2.tight_layout(rect=(-0.15, 0.0, 1.0, 1.0))
-    fig_2.savefig(f'./results/{case}/mean_heating_err/{b}_mean_heating_err.png')
-    plt.close('all')
-
-  plt.rcParams.update({'font.size': 12})
-
-# Plot the L2 difference along the 0.3 refinement threshold line
-def plot_l2_diff_03(case, diffs):
-  check_make_dir(f'./results/{case}/l2_diff_03')
-  print(f'Generating figures in ./results/{case}/l2_diff_03/*')
-
-  for b in BATCH_COUNT:
-    for data in LINE_DATA:
-      fig_1, ax_1 = plt.subplots(figsize=(SIZE_L2_W, SIZE_L2_H))
-
-      for ind in ALGORITHMS:
-        last_idx = last_adaptivity_idx(case, ind, b, '03', CYCLE_POINTS)
-        style = '-' if ind.count('lh') > 0 else ':'
-        ax_1.plot(CYCLE_POINTS[:last_idx], diffs[ind][b]['03'][data][:last_idx], color = ALG_COLOURS[ind], label = ALG_NAMES[ind], linestyle = style, linewidth=2)
-      ax_1.legend(ncols=3)
-      ax_1.set_xlabel('Number of Cycles', size=16)
-      ax_1.set_ylabel('$L_2$ Relative Difference', size=16)
-      ax_1.grid()
-      fig_1.tight_layout()
-      fig_1.savefig(f'./results/{case}/l2_diff_03/{b}_{data}.png')
-      plt.close('all')
-
-# Plot the number of elements at the last adaptivity cycle as a function
-# of refinement fraction
-def plot_nelem_last_cycle(case, pp_data):
-  check_make_dir(f'./results/{case}/num_elem_cycle_10')
-  print(f'Generating figures in ./results/{case}/num_elem_cycle_10/*')
-
-  for b in BATCH_COUNT:
-    fig_1, ax_1 = plt.subplots(figsize=(SIZE_L2_W, SIZE_L2_H)) #
-    for ind in ALGORITHMS:
-      style = '-' if ind.count('lh') > 0 else ':'
-      ax_1.plot(np.linspace(0.1, 0.5, 5), [pp_data[ind][b][r]['num_elem'][-1] for r in REF_FRAC],
-                color = ALG_COLOURS[ind], label = ALG_NAMES[ind], linestyle = style)
-    ax_1.legend(ncols=3)
-    ax_1.set_xlabel('Refinement Threshold', size=16)
-    ax_1.set_ylabel('Number of Active Elements', size=16)
-    ax_1.set_yscale('log')
-    ax_1.grid()
-    fig_1.tight_layout()
-    fig_1.savefig(f'./results/{case}/num_elem_cycle_10/{b}_num_elem.png')
-    plt.close('all')
+  plt.rcParams.update({'font.size': DEFAULT_FONT_SIZE})
 
 # The main function proper.
 if __name__ == "__main__":
   ap = ArgumentParser(description='PHYSOR 2026 AMR parameter sweep post-processor.')
   ap.add_argument('case', type=str, help='The particular case to generate. Must be one of either lwr or sfr.')
-  ap.add_argument('--disable-xlines', action='store_false')
-  ap.add_argument('--disable-gifs',   action='store_false')
-  ap.add_argument('--disable-3d',     action='store_false')
-  ap.add_argument('--bnds',           action='store_true')
-  ap.add_argument('--disable-mask',   action='store_false')
-  ap.add_argument('--disable-slices', action='store_false')
+  ap.add_argument('--disable-xlines', action='store_false',
+                  help='Whether the solution should be plotted along the length of the slab for each ' \
+                       'datapoint in the parameter sweep AND each adaptivity cycle.')
+  ap.add_argument('--disable-3d',     action='store_false',
+                  help='Whether the 3D comparison plots should be generateed or not.')
+  ap.add_argument('--disable-mask',   action='store_false',
+                  help='Whether the plots over the lengths of the slab overlay the material ' \
+                       'compositions of the slab or not.')
   args = ap.parse_args()
-
-  if args.bnds:
-    print_bnds()
-    exit()
 
   xl = load_data_xlines(args.case)
   ref_xl = load_data_xlines_ref(args.case)
@@ -555,17 +461,7 @@ if __name__ == "__main__":
   if args.disable_xlines:
     plot_xline_plots(xl, ref_xl, args.case, args.disable_mask)
 
-  # Only plot the data over x gifs if the user requests it and we've
-  # generated the x line plots.
-  if args.disable_gifs and args.disable_xlines:
-    make_gifs(args.case)
-
   # Only plot 3D data if requested.
   if args.disable_3d:
     plot_l2_diff(args.case, diffs)
     plot_pp_data(args.case, pp_data)
-
-  # Plot sliced data if requested.
-  if args.disable_slices:
-    plot_l2_diff_03(args.case, diffs)
-    plot_nelem_last_cycle(args.case, pp_data)
