@@ -13,9 +13,7 @@
 
   verbose = true
   power = ${fparse 3000e6 / 273 / (17 * 17)}
-  normalize_by_global_tally = false
   source_rate_normalization = 'kappa_fission'
-  assume_separate_tallies = true
 []
 
 # Include common tallies.
