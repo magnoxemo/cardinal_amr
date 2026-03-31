@@ -4,7 +4,6 @@ from openmc_materials import INITIAL_TEMP
 COMMON_SETTINGS = openmc.Settings()
 
 COMMON_SETTINGS.batches = 100
-COMMON_SETTINGS.generations_per_batch = 10
 COMMON_SETTINGS.inactive = 10
 COMMON_SETTINGS.particles = 1000
 

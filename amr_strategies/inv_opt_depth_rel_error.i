@@ -18,7 +18,7 @@
     []
     [rel_error]
       type = ValueThresholdMarker
-      invert = false
+      invert = true
       coarsen = ${C_STAT_ERROR}
       refine = ${R_STAT_ERROR}
       variable = heat_source_rel_error

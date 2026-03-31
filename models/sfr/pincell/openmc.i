@@ -14,7 +14,6 @@
   verbose = true
   power = ${fparse 3000e6/3000}
   cell_level = 1
-  normalize_by_global_tally = false
 []
 
 # Include common tallies.
